@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>帕金森病诊断工具 - 2015 MDS标准</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 15px;
+            padding-bottom: 260px; /* 增加底部空间 - 修改为260px */
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .diagnosis-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            border-top: 3px solid #3498db;
+        }
+
+        .diagnosis-result {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .diagnosis-main {
+            grid-column: 1 / span 4;
+            text-align: center;
+        }
+
+        .diagnosis-details {
+            grid-column: 1 / span 4;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .diagnosis-details .result-item {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .result-item {
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .result-item div:first-child {
+            font-size: 0.85em;
+            margin-bottom: 4px;
+        }
+
+        .result-item div:last-child {
+            font-size: 1em;
+        }
+
+        .result-confirmed {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+        }
+
+        .result-probable {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .result-not-met {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .result-pending {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .reset-button {
+            grid-column: 1 / span 4;
+            justify-self: center;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+
+        .reset-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .section {
+            margin-bottom: 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-header {
+            padding: 25px 30px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .core-symptoms { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .support-criteria { background: linear-gradient(135deg, #27ae60, #229954); }
+        .exclusion-criteria { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .red-flags { background: linear-gradient(135deg, #f39c12, #d68910); }
+
+        .section-content {
+            padding: 30px;
+        }
+
+        .criterion {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .criterion:hover {
+            background: #e8f4f8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .criterion input[type="checkbox"] {
+            margin-right: 15px;
+            transform: scale(1.3);
+            cursor: pointer;
+            pointer-events: none;
+        }
+
+        .criterion label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 1.05em;
+            line-height: 1.5;
+            pointer-events: none;
+        }
+
+        .core-symptoms .criterion { border-left-color: #3498db; }
+        .support-criteria .criterion { border-left-color: #27ae60; }
+        .exclusion-criteria .criterion { border-left-color: #e74c3c; }
+        .red-flags .criterion { border-left-color: #f39c12; }
+
+        .criterion.checked {
+            background: #f8f9fa;
+            border-left-width: 4px;
+        }
+
+        .exclusion-criteria .criterion.checked {
+            background: #f8f9fa;
+        }
+
+        .red-flags .criterion.checked {
+            background: #f8f9fa;
+        }
+
+        .support-criteria .criterion.checked {
+            background: #f8f9fa;
+        }
+
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 30px;
+            font-style: italic;
+            color: #856404;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                padding-bottom: 240px; /* 修改为240px */
+            }
+
+            .diagnosis-result {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .diagnosis-main {
+                order: 1;
+                width: 100%;
+            }
+
+            .diagnosis-details {
+                order: 2;
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+            }
+
+            .reset-button {
+                order: 3;
+                width: 100%;
+                margin-top: 6px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .diagnosis-panel {
+                padding: 8px;
+            }
+
+            .result-item {
+                padding: 8px 4px;
+                font-size: 0.8em;
+            }
+
+            .result-item div:first-child {
+                font-size: 0.75em;
+                margin-bottom: 2px;
+            }
+
+            .result-item div:last-child {
+                font-size: 0.9em;
+            }
+
+            .reset-button {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .section-content {
+                padding: 20px;
+            }
+
+            .criterion {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 12px;
+                margin-bottom: 15px;
+            }
+
+            .criterion input[type="checkbox"] {
+                margin-bottom: 8px;
+            }
+
+            .criterion label {
+                font-size: 0.95em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 8px;
+                padding-bottom: 220px; /* 修改为220px */
+            }
+
+            .header h1 {
+                font-size: 1.6em;
+            }
+
+            .diagnosis-panel {
+                padding: 6px;
+            }
+
+            .diagnosis-details {
+                grid-template-columns: 1fr 1fr;
+                gap: 3px;
+            }
+
+            .result-item {
+                padding: 6px 3px;
+                font-size: 0.75em;
+            }
+
+            .result-item div:first-child {
+                font-size: 0.7em;
+                margin-bottom: 1px;
+            }
+
+            .result-item div:last-child {
+                font-size: 0.85em;
+            }
+
+            .reset-button {
+                padding: 6px 10px;
+                font-size: 11px;
+                margin-top: 4px;
+            }
+
+            .section-header {
+                padding: 15px 20px;
+                font-size: 1.1em;
+            }
+
+            .section-content {
+                padding: 15px;
+            }
+
+            .criterion {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+
+            .criterion label {
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 360px) {
+            body {
+                padding: 5px;
+                padding-bottom: 200px; /* 修改为200px */
+            }
+
+            .header h1 {
+                font-size: 1.4em;
+            }
+
+            .diagnosis-panel {
+                padding: 5px;
+            }
+
+            .diagnosis-details {
+                grid-template-columns: 1fr 1fr;
+                gap: 2px;
+            }
+
+            .result-item {
+                padding: 4px 2px;
+                font-size: 0.7em;
+            }
+
+            .result-item div:first-child {
+                font-size: 0.65em;
+                margin-bottom: 1px;
+            }
+
+            .result-item div:last-child {
+                font-size: 0.8em;
+            }
+
+            .reset-button {
+                padding: 5px 8px;
+                font-size: 10px;
+                margin-top: 3px;
+            }
+
+            .section-content {
+                padding: 12px;
+            }
+
+            .criterion {
+                padding: 8px;
+                margin-bottom: 8px;
+            }
+
+            .criterion label {
+                font-size: 0.85em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="diagnosis-panel">
+        <div class="diagnosis-result">
+            <div class="diagnosis-main">
+                <div class="result-item" id="finalResult">
+                    <div>诊断结果</div>
+                    <div id="finalStatus">待评估</div>
+                </div>
+            </div>
+            <div class="diagnosis-details">
+                <div class="result-item" id="coreResult">
+                    <div>核心症状</div>
+                    <div id="coreStatus">待评估</div>
+                </div>
+                <div class="result-item" id="supportCount">
+                    <div>支持标准</div>
+                    <div id="supportStatus">0/4</div>
+                </div>
+                <div class="result-item" id="exclusionCount">
+                    <div>排除标准</div>
+                    <div id="exclusionStatus">0/9</div>
+                </div>
+                <div class="result-item" id="redFlagCount">
+                    <div>警示征象</div>
+                    <div id="redFlagStatus">0/10</div>
+                </div>
+            </div>
+            <button class="reset-button" onclick="resetAll()">重置所有选项</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>帕金森病诊断工具</h1>
+        <p>基于2015年国际运动障碍学会(MDS)诊断标准</p>
+    </div>
+
+    <div class="container">
+        <div class="section core-symptoms">
+            <div class="section-header">
+                <i>🧠</i> 核心症状 (必须有运动迟缓 + 静止性震颤或肌强直之一)
+            </div>
+            <div class="section-content">
+                <div class="criterion" onclick="toggleCheckbox('core1')">
+                    <input type="checkbox" id="core1">
+                    <label for="core1">运动迟缓 (必需条件)</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('core2')">
+                    <input type="checkbox" id="core2">
+                    <label for="core2">肌强直</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('core3')">
+                    <input type="checkbox" id="core3">
+                    <label for="core3">静止性震颤</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="note">
+            <strong>核心症状说明：</strong> 必须有"运动迟缓"，同时"静止性震颤"和"肌强直"至少有一个。
+        </div>
+
+        <div class="section support-criteria">
+            <div class="section-header">
+                <i>✅</i> 支持标准 (确诊需≥2条，很可能需>警示征象数)
+            </div>
+            <div class="section-content">
+                <div class="criterion" onclick="toggleCheckbox('support1')">
+                    <input type="checkbox" id="support1">
+                    <label for="support1">左旋多巴明显有效，存在"开"、"关"状态</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('support2')">
+                    <input type="checkbox" id="support2">
+                    <label for="support2">异动症</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('support3')">
+                    <input type="checkbox" id="support3">
+                    <label for="support3">体检观察到静止性震颤（既往或本次）</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('support4')">
+                    <input type="checkbox" id="support4">
+                    <label for="support4">辅检阳性：嗅觉减退或丧失；TCS，MIBG</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="section exclusion-criteria">
+            <div class="section-header">
+                <i>❌</i> 绝对排除标准 (任一条存在即排除诊断)
+            </div>
+            <div class="section-content">
+                <div class="criterion" onclick="toggleCheckbox('exclusion1')">
+                    <input type="checkbox" id="exclusion1">
+                    <label for="exclusion1">小脑性共济失调或眼动异常</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('exclusion2')">
+                    <input type="checkbox" id="exclusion2">
+                    <label for="exclusion2">向下的垂直性核上性凝视麻痹或选择性的向下垂直性扫视减慢</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('exclusion3')">
+                    <input type="checkbox" id="exclusion3">
+                    <label for="exclusion3">发病5年内被诊断高度怀疑的行为变异型额颞叶痴呆或原发性进行性失语</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('exclusion4')">
+                    <input type="checkbox" id="exclusion4">
+                    <label for="exclusion4">发病3年内局限于下肢帕金森样症</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('exclusion5')">
+                    <input type="checkbox" id="exclusion5">
+                    <label for="exclusion5">多巴胺受体阻滞剂或耗竭剂治疗诱发的帕金森综合征</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('exclusion6')">
+                    <input type="checkbox" id="exclusion6">
+                    <label for="exclusion6">病情中等严重（肌强直或运动迟缓计分大于2分），但高剂量左旋多巴缺乏显著应答</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('exclusion7')">
+                    <input type="checkbox" id="exclusion7">
+                    <label for="exclusion7">存在明确皮质复合感觉丧失，肢体观念运动性失用或进行性失语</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('exclusion8')">
+                    <input type="checkbox" id="exclusion8">
+                    <label for="exclusion8">分子神经影像学检查突触前多巴胺能系统功能正常</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('exclusion9')">
+                    <input type="checkbox" id="exclusion9">
+                    <label for="exclusion9">存在明确导致帕金森综合征的其他疾病，或专家判断可能为其他综合征</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="section red-flags">
+            <div class="section-header">
+                <i>⚠️</i> 警示征象 (很可能诊断需≤2条且<支持标准数)
+            </div>
+            <div class="section-content">
+                <div class="criterion" onclick="toggleCheckbox('redflag1')">
+                    <input type="checkbox" id="redflag1">
+                    <label for="redflag1">发病5年内快速进展的步态障碍，以致需常用轮椅</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag2')">
+                    <input type="checkbox" id="redflag2">
+                    <label for="redflag2">发病5年内出现球麻痹</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag3')">
+                    <input type="checkbox" id="redflag3">
+                    <label for="redflag3">发病5年内出现严重自主神经功能障碍：体位性低血压、尿潴留或尿失禁、勃起障碍</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag4')">
+                    <input type="checkbox" id="redflag4">
+                    <label for="redflag4">运动症状或体征发病5年内或以上不进展，除非与治疗有关</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag5')">
+                    <input type="checkbox" id="redflag5">
+                    <label for="redflag5">发病3年内反复跌倒（大于1次/年）</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag6')">
+                    <input type="checkbox" id="redflag6">
+                    <label for="redflag6">发病10年内出现不成比例的颈部前倾或手足挛缩</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag7')">
+                    <input type="checkbox" id="redflag7">
+                    <label for="redflag7">起病或病程表现为双侧对称性帕金森综合征症状，无侧别优势</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag8')">
+                    <input type="checkbox" id="redflag8">
+                    <label for="redflag8">出现不能解释的锥体束征</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag9')">
+                    <input type="checkbox" id="redflag9">
+                    <label for="redflag9">发病5年内不出现任一常见非运动症状：嗅觉，睡眠（维持性失眠、日间过度嗜睡、RBD）</label>
+                </div>
+                <div class="criterion" onclick="toggleCheckbox('redflag10')">
+                    <input type="checkbox" id="redflag10">
+                    <label for="redflag10">发病5年内不出现自主神经功能障碍（便秘、日间尿急、体位性低血压）或精神障碍（抑郁、焦虑、幻觉）</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="note">
+            <strong>诊断标准：</strong><br>
+            • <strong>临床确诊：</strong> 核心症状满足 + 无绝对排除标准 + 无警示征象 + 支持标准≥2条<br>
+            • <strong>临床很可能：</strong> 核心症状满足 + 无绝对排除标准 + 警示征象≤2条 + 支持标准数>警示征象数
+        </div>
+    </div>
+
+    <script>
+        function toggleCheckbox(checkboxId) {
+            const checkbox = document.getElementById(checkboxId);
+            checkbox.checked = !checkbox.checked;
+            updateDiagnosis();
+        }
+        
+        function updateDiagnosis() {
+            // 更新选中状态的视觉效果
+            updateVisualStates();
+            
+            // 核心症状评估
+            const bradykinesia = document.getElementById('core1').checked;
+            const rigidity = document.getElementById('core2').checked;
+            const tremor = document.getElementById('core3').checked;
+            
+            const coreSymptomsMet = bradykinesia && (rigidity || tremor);
+            
+            // 计算支持标准数量
+            let supportCount = 0;
+            for (let i = 1; i <= 4; i++) {
+                if (document.getElementById(`support${i}`).checked) {
+                    supportCount++;
+                }
+            }
+            
+            // 计算绝对排除标准数量
+            let exclusionCount = 0;
+            for (let i = 1; i <= 9; i++) {
+                if (document.getElementById(`exclusion${i}`).checked) {
+                    exclusionCount++;
+                }
+            }
+            
+            // 计算警示征象数量
+            let redFlagCount = 0;
+            for (let i = 1; i <= 10; i++) {
+                if (document.getElementById(`redflag${i}`).checked) {
+                    redFlagCount++;
+                }
+            }
+            
+            // 更新计数显示
+            document.getElementById('supportStatus').textContent = `${supportCount}/4`;
+            document.getElementById('exclusionStatus').textContent = `${exclusionCount}/9`;
+            document.getElementById('redFlagStatus').textContent = `${redFlagCount}/10`;
+            
+            // 更新核心症状状态
+            const coreResult = document.getElementById('coreResult');
+            const coreStatus = document.getElementById('coreStatus');
+            
+            if (coreSymptomsMet) {
+                coreStatus.textContent = '满足';
+                coreResult.className = 'result-item result-confirmed';
+            } else {
+                coreStatus.textContent = '不满足';
+                coreResult.className = 'result-item result-not-met';
+            }
+            
+            // 诊断逻辑
+            const finalResult = document.getElementById('finalResult');
+            const finalStatus = document.getElementById('finalStatus');
+            
+            if (!coreSymptomsMet) {
+                finalStatus.textContent = '不符合诊断';
+                finalResult.className = 'result-item result-not-met';
+            } else if (exclusionCount > 0) {
+                finalStatus.textContent = '排除诊断';
+                finalResult.className = 'result-item result-not-met';
+            } else if (supportCount >= 2 && redFlagCount === 0) {
+                finalStatus.textContent = '临床确诊';
+                finalResult.className = 'result-item result-confirmed';
+            } else if (redFlagCount <= 2 && supportCount > redFlagCount) {
+                finalStatus.textContent = '临床很可能';
+                finalResult.className = 'result-item result-probable';
+            } else {
+                finalStatus.textContent = '不满足诊断';
+                finalResult.className = 'result-item result-not-met';
+            }
+            
+            // 更新支持标准、排除标准、警示征象的颜色
+            const supportCountEl = document.getElementById('supportCount');
+            const exclusionCountEl = document.getElementById('exclusionCount');
+            const redFlagCountEl = document.getElementById('redFlagCount');
+            
+            // 支持标准颜色
+            if (supportCount >= 2) {
+                supportCountEl.className = 'result-item result-confirmed';
+            } else if (supportCount > 0) {
+                supportCountEl.className = 'result-item result-probable';
+            } else {
+                supportCountEl.className = 'result-item result-pending';
+            }
+            
+            // 排除标准颜色
+            if (exclusionCount > 0) {
+                exclusionCountEl.className = 'result-item result-not-met';
+            } else {
+                exclusionCountEl.className = 'result-item result-confirmed';
+            }
+            
+            // 警示征象颜色
+            if (redFlagCount > 2) {
+                redFlagCountEl.className = 'result-item result-not-met';
+            } else if (redFlagCount > 0) {
+                redFlagCountEl.className = 'result-item result-probable';
+            } else {
+                redFlagCountEl.className = 'result-item result-confirmed';
+            }
+        }
+        
+        function updateVisualStates() {
+            // 更新所有选项的视觉状态
+            const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+            allCheckboxes.forEach(checkbox => {
+                const criterion = checkbox.closest('.criterion');
+                if (checkbox.checked) {
+                    criterion.classList.add('checked');
+                } else {
+                    criterion.classList.remove('checked');
+                }
+            });
+        }
+        
+        function resetAll() {
+            // 重置所有复选框
+            const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // 重置所有视觉状态
+            const allCriteria = document.querySelectorAll('.criterion');
+            allCriteria.forEach(criterion => {
+                criterion.classList.remove('checked');
+            });
+            
+            // 重置诊断结果
+            document.getElementById('coreStatus').textContent = '待评估';
+            document.getElementById('finalStatus').textContent = '待评估';
+            document.getElementById('supportStatus').textContent = '0/4';
+            document.getElementById('exclusionStatus').textContent = '0/9';
+            document.getElementById('redFlagStatus').textContent = '0/10';
+            
+            // 重置结果面板颜色
+            const resultItems = document.querySelectorAll('.result-item');
+            resultItems.forEach(item => {
+                if (!item.querySelector('button')) { // 不包括重置按钮
+                    item.className = 'result-item result-pending';
+                }
+            });
+        }
+        
+        // 初始化
+        updateDiagnosis();
+    </script>
+</body>
+</html>
